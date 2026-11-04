@@ -9,6 +9,14 @@ import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var logView: TextView
+
+    private fun refreshLog() {
+        val prefs = getSharedPreferences("blocker", Context.MODE_PRIVATE)
+        val log = prefs.getString("log", "") ?: ""
+        logView.text = if (log.isBlank()) "No blocked calls yet" else log
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val prefs = getSharedPreferences("blocker", Context.MODE_PRIVATE)
@@ -25,6 +33,11 @@ class MainActivity : AppCompatActivity() {
         }
         val save = Button(this).apply { text = "Save ranges" }
         val enable = Button(this).apply { text = "Enable call blocking" }
+        val logLabel = TextView(this).apply {
+            text = "\nBlocked calls (latest first)"
+        }
+        logView = TextView(this)
+        val clear = Button(this).apply { text = "Clear log" }
 
         save.setOnClickListener {
             prefs.edit().putString("ranges", ranges.text.toString()).apply()
@@ -39,7 +52,19 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Already enabled", Toast.LENGTH_SHORT).show()
             }
         }
-        listOf(label, ranges, save, enable).forEach { layout.addView(it) }
-        setContentView(layout)
+        clear.setOnClickListener {
+            prefs.edit().remove("log").apply()
+            refreshLog()
+        }
+
+        listOf(label, ranges, save, enable, logLabel, logView, clear)
+            .forEach { layout.addView(it) }
+        setContentView(ScrollView(this).apply { addView(layout) })
+        refreshLog()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshLog()
     }
 }
