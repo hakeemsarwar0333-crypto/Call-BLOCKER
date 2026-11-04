@@ -1,8 +1,12 @@
 package com.example.callblocker
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.telecom.Call
 import android.telecom.CallScreeningService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class CallBlockerService : CallScreeningService() {
 
@@ -12,6 +16,8 @@ class CallBlockerService : CallScreeningService() {
         val ranges = prefs.getString("ranges", DEFAULT_RANGES) ?: DEFAULT_RANGES
 
         val block = isBlocked(incoming, ranges)
+        if (block) logBlocked(prefs, incoming)
+
         val response = CallResponse.Builder()
             .setDisallowCall(block)
             .setRejectCall(block)
@@ -19,6 +25,14 @@ class CallBlockerService : CallScreeningService() {
             .setSkipNotification(block)
             .build()
         respondToCall(callDetails, response)
+    }
+
+    private fun logBlocked(prefs: SharedPreferences, number: String) {
+        val time = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault()).format(Date())
+        val shown = if (number.isBlank()) "Unknown" else number
+        val old = prefs.getString("log", "") ?: ""
+        val lines = (listOf("$time   $shown") + old.lines().filter { it.isNotBlank() }).take(100)
+        prefs.edit().putString("log", lines.joinToString("\n")).apply()
     }
 
     companion object {
